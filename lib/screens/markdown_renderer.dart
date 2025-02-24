@@ -1,10 +1,11 @@
 import 'package:ai_app/constants/colors.dart';
 import 'package:ai_app/constants/data.dart';
 import 'package:ai_app/constants/theme.dart';
-import 'package:ai_app/utils/direction_analysis/airection_analysis.dart';
+import 'package:ai_app/utils/direction_analysis/direction_analysis.dart';
+import 'package:ai_app/widgets/copy_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
 
 class BoxSyntax extends md.InlineSyntax {
@@ -15,6 +16,65 @@ class BoxSyntax extends md.InlineSyntax {
     final content = match.group(1)!;
     parser.addNode(md.Element.text('inline_code', content));
     return true;
+  }
+}
+
+class LatexMathSyntax extends md.InlineSyntax {
+  LatexMathSyntax()
+      : super(
+          r'\\\(.*?\\\)',
+        );
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final text = match[0]!; // متن کامل پیدا شده
+    final content = text
+        .substring(2, text.length - 2)
+        .trim(); // حذف `\(...\)` برای فرمول درون‌خطی
+
+    // اضافه کردن یک گره جدید با نوع 'math' و محتوای فرمول
+    parser.addNode(md.Element.text('inline_math', content));
+    return true;
+  }
+}
+
+class LatexBlockMathSyntax extends md.BlockSyntax {
+  LatexBlockMathSyntax() : super();
+
+  @override
+  RegExp get pattern => RegExp(r'^\\\[(.*?)\\\]$');
+
+  @override
+  md.Node? parse(md.BlockParser parser) {
+    final match = pattern.firstMatch(parser.current.content)!;
+    final content = match.group(1)?.trim() ?? '';
+
+    // ایجاد یک گره جدید برای فرمول بلوکی
+    parser.advance();
+    return md.Element.text('math_block', content);
+  }
+}
+
+class LatexBlockSyntax extends md.BlockSyntax {
+  @override
+  RegExp get pattern => RegExp(r'^\\\[$');
+
+  @override
+  md.Node parse(md.BlockParser parser) {
+    final buffer = StringBuffer();
+    parser.advance();
+
+    while (!parser.isDone) {
+      final line = parser.current.content;
+      if (line.trim() == r'\]') {
+        parser.advance();
+        break;
+      }
+      buffer.writeln(line);
+      parser.advance();
+    }
+
+    return md.Element('math_block', [md.Text(buffer.toString().trim())]);
   }
 }
 
@@ -34,17 +94,7 @@ class _ArrayContentState extends State<ArrayContent> {
   // @override
   // void initState() {
   //   super.initState();
-  //   text = data2;
-
-  //   List<MarkdownElement> elements = parseMarkdown(text);
-
-  //   String rawText = '';
-
-  //   for (MarkdownElement element in elements) {
-  //     rawText += element.extractFullText(excludeTags: ['code']);
-  //   }
-
-  //   parentDirection = getDominantTextDirectionFromText(rawText);
+  //   text = textData;
 
   //   _startTyping();
   // }
@@ -71,32 +121,33 @@ class _ArrayContentState extends State<ArrayContent> {
   //   super.dispose();
   // }
 
-  String get textData => data2;
+  String get textData => d10;
 
   List<MarkdownElement> get elements => parseMarkdown(textData);
 
-  TextDirection get direction {
+  String get rawText {
     String text = '';
 
     for (MarkdownElement element in elements) {
       text += element.extractFullText(excludeTags: ['code']);
     }
 
-    return getDominantTextDirectionFromText(text);
+    return text;
   }
+
+  TextDirection get direction => getDominantTextDirectionFromText(rawText);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
-          child: MarkdownRenderer(
-            elements: elements,
-            parentDirection: direction,
-          ),
+          child: SingleChildScrollView(
+        padding: const EdgeInsets.all(40),
+        child: MarkdownRenderer(
+          elements: elements,
+          parentDirection: direction,
         ),
-      ),
+      )),
     );
   }
 
@@ -342,21 +393,13 @@ class MarkdownElement {
     final buffer = StringBuffer();
 
     buffer.write('${indentStr}MarkdownElement(\n');
-    buffer.write('$indentStr  type: \'$type\',\n'); // تغییر در این خط
-    buffer.write('$indentStr  id: \'$id\',\n'); // تغییر در این خط
-
-    // if (parents != null && parents!.isNotEmpty) {
-    //   buffer.write('$indentStr  parentTypes: [\n');
-    //   buffer.write(parents!.map((t) => '$indentStr    \'$t\'').join(',\n'));
-    //   buffer.write('\n$indentStr  ],\n');
-    // }
+    buffer.write('$indentStr  type: \'$type\',\n');
+    buffer.write('$indentStr  id: \'$id\',\n');
 
     if (content != null) {
       final contentStr = content.toString().replaceAll('\n', '\n$indentStr  ');
       buffer.write('$indentStr  content: $contentStr,\n');
     }
-
-    // buffer.write('$indentStr  textContent: \'$textContent\',\n');
 
     if (attributes != null) {
       buffer.write('$indentStr  attributes: $attributes,\n');
@@ -380,46 +423,24 @@ class MarkdownElement {
 }
 
 List<MarkdownElement> parseMarkdown(String input) {
-  // MarkdownElement.resetIdCounter();
-
   final document = md.Document(
     extensionSet: md.ExtensionSet.gitHubWeb,
     blockSyntaxes: [
+      LatexBlockSyntax(),
       ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
     ],
     inlineSyntaxes: [
       ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes,
+      LatexMathSyntax(),
       BoxSyntax(),
       md.LineBreakSyntax(),
       md.InlineHtmlSyntax(),
     ],
   );
-  // final nodes = document.parse(input);
-  // return _processNodes(nodes);
 
   final nodes = document.parse(input);
   final elements = _processNodes(nodes);
 
-  // // جمعآوری تمام المانها به ترتیب پیشوندی (pre-order)
-  // List<MarkdownElement> allElements = [];
-  // void collectElements(MarkdownElement element) {
-  //   allElements.add(element);
-  //   for (var child in element.children) {
-  //     collectElements(child);
-  //   }
-  // }
-
-  // for (var element in elements) {
-  //   collectElements(element);
-  // }
-
-  // // اختصاص IDها به ترتیب
-  // int currentId = 1;
-  // for (var element in allElements) {
-  //   element.id = currentId++;
-  // }
-
-  // جمع‌آوری تمام المان‌ها و اختصاص ID
   List<MarkdownElement> allElements = [];
   void collectElements(MarkdownElement element) {
     allElements.add(element); // افزودن المان فعلی
@@ -456,55 +477,6 @@ List<MarkdownElement> parseMarkdown(String input) {
   for (var element in allElements) {
     element.id = currentId++;
   }
-
-  // // تابع برای پر کردن parents
-  // void populateParents(
-  //     MarkdownElement element, List<MarkdownElement> parentStack) {
-  //   element.parents = parentStack
-  //       .map(
-  //         (parent) => Parent(
-  //           type: parent.type,
-  //           id: parent.id,
-  //         ),
-  //       )
-  //       .toList();
-
-  //   // پردازش فرزندان معمولی
-  //   for (var child in element.children) {
-  //     populateParents(child, [...parentStack, element]);
-  //   }
-
-  //   // پردازش سربرگ‌های جدول
-  //   if (element.content?.headers != null) {
-  //     for (var header in element.content!.headers!) {
-  //       populateParents(
-  //           header, [...parentStack, element]); // افزودن والدین به سربرگ
-  //       // پردازش فرزندان سربرگ (اگر وجود داشته باشد)
-  //       for (var childInHeader in header.children) {
-  //         populateParents(childInHeader, [...parentStack, element, header]);
-  //       }
-  //     }
-  //   }
-
-  //   // پردازش سطرها و سلول‌های جدول
-  //   if (element.content?.rows != null) {
-  //     for (var row in element.content!.rows!) {
-  //       for (var cell in row) {
-  //         populateParents(
-  //             cell, [...parentStack, element]); // افزودن والدین به سلول
-  //         // پردازش فرزندان سلول (اگر وجود داشته باشد)
-  //         for (var childInCell in cell.children) {
-  //           populateParents(childInCell, [...parentStack, element, cell]);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
-  // for (var rootElement in elements) {
-  //   populateParents(rootElement, []);
-  // }
-
   return elements;
 }
 
@@ -557,7 +529,7 @@ MarkdownElement _processText(
 MarkdownElement _processElement(
   md.Element element, {
   int parentIndent = 0,
-  List<String>? parentTypes, // تغییر پارامتر
+  List<String>? parentTypes,
   required int index,
 }) {
   int currentIndent = parentIndent;
@@ -613,7 +585,8 @@ bool _isBlockLevel(String tag) {
     "video", "audio",
     "dir",
     'img',
-    "menu", //
+    "menu",
+    'math_block', //
   }.contains(tag);
 }
 
@@ -631,6 +604,7 @@ bool _isSpecialElement(md.Element element) {
     'code',
     'a',
     'img',
+    'math_block',
   }.contains(element.tag);
 }
 
@@ -671,6 +645,12 @@ MarkdownElement _processSpecialElements(
         indentLevel: indentLevel,
         index: index,
       );
+    case 'math_block':
+      return _processLatex(
+        element,
+        indentLevel: indentLevel,
+        index: index,
+      );
     default:
       return _processElement(
         element,
@@ -703,8 +683,6 @@ MarkdownElement _processTable(
   required int index,
 }) {
   try {
-    // ایجاد لیست جدید parentTypes برای فرزندان
-
     final headerRow = element.children!
         .whereType<md.Element>()
         .firstWhere((e) => e.tag == 'thead')
@@ -815,29 +793,21 @@ MarkdownElement _processImage(
   );
 }
 
-// String _extractFullText(md.Element element) {
-//   if (element.tag == 'pre' || element.tag == 'code') {
-//     return '';
-//   }
-
-//   // استخراج متن‌های مستقیم
-//   final directTexts = element.children
-//           ?.whereType<md.Text>()
-//           .map((t) => t.text)
-//           .join(' ')
-//           .trim() ??
-//       '';
-
-//   // استخراج متن‌های موجود در گره‌های فرزند (به صورت بازگشتی)
-//   final childrenTexts = element.children
-//           ?.whereType<md.Element>()
-//           .map((child) => _extractFullText(child))
-//           .join(' ')
-//           .trim() ??
-//       '';
-
-//   return '$directTexts $childrenTexts'.trim();
-// }
+MarkdownElement _processLatex(
+  md.Element element, {
+  int indentLevel = 0,
+  required int index,
+}) {
+  return MarkdownElement(
+    type: element.tag,
+    index: index,
+    indent: indentLevel,
+    children: _processNodes(
+      element.children ?? [],
+      parentIndentLevel: indentLevel,
+    ),
+  );
+}
 
 List<Parent> findParentsById(List<MarkdownElement> root, int targetId) {
   List<Parent> result = [];
@@ -1021,7 +991,7 @@ class MarkdownRenderer extends StatelessWidget {
           textDirection = getDominantTextDirectionFromText(text);
         }
 
-        TextAlign textAlign = textDirection == TextDirection.ltr
+        TextAlign textAlign = parentDirection == TextDirection.ltr
             ? TextAlign.left
             : TextAlign.right;
 
@@ -1095,6 +1065,9 @@ class MarkdownRenderer extends StatelessWidget {
       case 'h1':
       case 'h2':
       case 'h3':
+      case 'h4':
+      case 'h5':
+      case 'h6':
         return Directionality(
           textDirection: textDirection,
           child: Padding(
@@ -1136,7 +1109,7 @@ class MarkdownRenderer extends StatelessWidget {
             element.content?.headers ?? [],
             element.content?.rows ?? [],
             style,
-            textDirection == TextDirection.ltr
+            parentDirection == TextDirection.ltr
                 ? Alignment.centerLeft
                 : Alignment.centerRight,
           ),
@@ -1169,7 +1142,7 @@ class MarkdownRenderer extends StatelessWidget {
         );
       case 'blockquote':
         return Directionality(
-          textDirection: textDirection,
+          textDirection: parentDirection,
           child: _buildBlockquote(element, style),
         );
       case 'hr':
@@ -1177,6 +1150,9 @@ class MarkdownRenderer extends StatelessWidget {
           color: lightGrey,
           indent: 1,
         );
+
+      case 'math_block':
+        return _buildLatex(element);
       default:
         if (element.children.isNotEmpty) {
           return Directionality(
@@ -1207,14 +1183,35 @@ class MarkdownRenderer extends StatelessWidget {
         return parentStyle.merge(
           const TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.bold,
           ),
         );
       case 'h3':
         return parentStyle.merge(
           const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+      case 'h4':
+        return parentStyle.merge(
+          const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+      case 'h5':
+        return parentStyle.merge(
+          const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+      case 'h6':
+        return parentStyle.merge(
+          const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
           ),
         );
       case 'strong':
@@ -1265,6 +1262,14 @@ class MarkdownRenderer extends StatelessWidget {
             fontFamily: 'monospace',
           ),
         );
+      case 'inline_math':
+        return parentStyle.merge(
+          const TextStyle(
+            fontSize: 14,
+            decorationColor: black,
+            // fontFamily: 'monospace',
+          ),
+        );
       default:
         return parentStyle;
     }
@@ -1279,19 +1284,169 @@ class MarkdownRenderer extends StatelessWidget {
     final style = _resolveStyle(element.type, parentStyle);
     final textContent = element.content?.text ?? '';
 
-    // if (_isInsideInlineCode(element)) {
-    //   return _buildInlineCodeTextSpan(element, style);
-    // }
+    int? mathId = _isInsideMath(element);
+    if (mathId != null) {
+      return _buildMathTextSpan(element, style);
+    }
+
     int? linkId = _isInsideLink(element);
     if (linkId != null) {
       return _buildLinkTextSpan(
           findElementById(elements, linkId), element, style);
     }
 
+    int? codeId = _isInsideCode(element);
+    if (codeId != null) {
+      return _buildCodeTextSpan(element, style);
+    }
+
     return TextSpan(
       text: textContent,
       style: style,
       children: element.children.map((e) => _buildTextSpan(e, style)).toList(),
+    );
+  }
+
+  int? _isInsideCode(MarkdownElement element) {
+    if (element.type != 'text') {
+      return null;
+    }
+
+    List<Parent> parents = findParentsById(elements, element.id);
+
+    List<int?> gatherIds = parents.map(
+      (e) {
+        if (e.type == 'inline_code') {
+          return e.id;
+        }
+      },
+    ).toList();
+
+    if (gatherIds.every((element) => element == null)) {
+      return null;
+    }
+
+    return gatherIds.where((e) => e != null).first;
+  }
+
+  InlineSpan _buildCodeTextSpan(
+    MarkdownElement element,
+    TextStyle style,
+  ) {
+    return WidgetSpan(
+      baseline: TextBaseline.alphabetic,
+      alignment: PlaceholderAlignment.baseline,
+      child: Text(
+        element.content?.text ?? '',
+        textDirection: TextDirection.ltr,
+        style: style,
+      ),
+    );
+  }
+
+  int? _isInsideMath(MarkdownElement element) {
+    if (element.type != 'text') {
+      return null;
+    }
+
+    List<Parent> parents = findParentsById(elements, element.id);
+
+    List<int?> gatherIds = parents.map(
+      (e) {
+        if (e.type == 'inline_math' || e.type == 'math_block') {
+          return e.id;
+        }
+      },
+    ).toList();
+
+    if (gatherIds.every((element) => element == null)) {
+      return null;
+    }
+
+    return gatherIds.where((e) => e != null).first;
+  }
+
+  InlineSpan _buildMathTextSpan(
+    MarkdownElement element,
+    TextStyle style,
+  ) {
+    String mathData = element.content?.text ?? '';
+
+    final pattern = RegExp(r'\\text\{([^}]*)\}');
+    final matches = pattern.allMatches(mathData);
+
+    List<InlineSpan> spans = [];
+
+    int start = 0;
+    for (final match in matches) {
+      // متنی که قبل از \text{...} قرار دارد
+      if (match.start > start) {
+        final chunk = mathData.substring(start, match.start);
+        if (chunk.isNotEmpty) {
+          spans.add(
+            _createWidgetSpan(
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: Math.tex(
+                    chunk,
+                    settings: const TexParserSettings(
+                      displayMode: true,
+                      strict: Strict.function,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      }
+
+      // متنی که داخل \text{...} است
+      final textInside = match.group(1);
+      if (textInside != null && textInside.isNotEmpty) {
+        spans.add(
+          TextSpan(
+            text: ' $textInside ',
+            style: style,
+          ),
+        );
+      }
+      start = match.end;
+    }
+
+    // اگر متنی بعد از آخرین \text{...} باقی مانده بود
+    if (start < mathData.length) {
+      final chunk = mathData.substring(start);
+      if (chunk.isNotEmpty) {
+        spans.add(
+          _createWidgetSpan(
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: Math.tex(
+                  chunk,
+                  settings: const TexParserSettings(
+                    displayMode: true,
+                    strict: Strict.function,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return _createWidgetSpan(
+      child: RichText(
+        textDirection: TextDirection.ltr,
+        text: TextSpan(
+          children: spans,
+        ),
+      ),
     );
   }
 
@@ -1317,29 +1472,25 @@ class MarkdownRenderer extends StatelessWidget {
     return gatherIds.where((e) => e != null).first;
   }
 
-  TextSpan _buildLinkTextSpan(
+  InlineSpan _buildLinkTextSpan(
     MarkdownElement? parent,
     MarkdownElement element,
     TextStyle style,
   ) {
-    return TextSpan(
-      children: [
-        _createWidgetSpan(
-          child: InkWell(
-            onTap: () {
-              print(parent?.attributes?.href);
-            },
-            child: Text(element.content?.text ?? '', style: style),
-          ),
-        ),
-      ],
+    return _createWidgetSpan(
+      child: InkWell(
+        onTap: () {
+          print(parent?.attributes?.href);
+        },
+        child: Text(element.content?.text ?? '', style: style),
+      ),
     );
   }
 
-  WidgetSpan _createWidgetSpan({required Widget child}) {
+  InlineSpan _createWidgetSpan({required Widget child}) {
     return WidgetSpan(
       baseline: TextBaseline.alphabetic,
-      alignment: PlaceholderAlignment.middle,
+      alignment: PlaceholderAlignment.baseline,
       child: child,
     );
   }
@@ -1350,19 +1501,13 @@ class MarkdownRenderer extends StatelessWidget {
     MarkdownElement element,
     TextStyle style,
   ) {
-    // final String text = element.extractFullText();
-    // final textDirection = getDominantTextDirectionFromText(text);
-    // final TextAlign align =
-    //     textDirection == TextDirection.rtl ? TextAlign.right : TextAlign.left;
-
     List<Parent> parents = findParentsById(elements, element.id);
 
     final bool isOrderedList = parents.isNotEmpty && parents.last.type == 'ol';
     final String indicator = isOrderedList ? '${element.index + 1}. ' : '• ';
 
-    EdgeInsetsDirectional edgeInsetsDirectional = EdgeInsetsDirectional.only(
-      start: element.indent > 2 ? 2.0 * element.indent : 0.0,
-      end: element.indent > 2 ? 0.0 : 2.0 * element.indent,
+    EdgeInsetsDirectional edgeInsetsDirectional =
+        const EdgeInsetsDirectional.only(
       top: 4,
       bottom: 4,
     );
@@ -1390,7 +1535,6 @@ class MarkdownRenderer extends StatelessWidget {
               children: _buildGroupedChildren(
                 element.children,
                 style,
-                // align: align,
               ),
             ),
           ),
@@ -1404,7 +1548,6 @@ class MarkdownRenderer extends StatelessWidget {
       textDirection: TextDirection.ltr,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
         margin: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: Colors.grey[100],
@@ -1413,49 +1556,31 @@ class MarkdownRenderer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              textDirection: TextDirection.ltr,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  language == null || language.isEmpty
-                      ? 'plaintext'
-                      : language[0].toUpperCase() + language.substring(1),
-                  style: const TextStyle(
-                    color: grey,
-                  ),
-                ),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(90, 26),
-                    maximumSize: const Size(90, 26),
-                    fixedSize: const Size(90, 26),
-                    overlayColor: black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Row(
+                textDirection: TextDirection.ltr,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    language == null || language.isEmpty
+                        ? 'plaintext'
+                        : language[0].toUpperCase() + language.substring(1),
+                    style: const TextStyle(
+                      color: black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  onPressed: () {},
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Icon(
-                        FontAwesomeIcons.clipboard,
-                        size: 16,
-                        color: black,
-                      ),
-                      Text(
-                        'Copy code',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: black,
-                        ),
-                      ),
-                    ],
+                  SizedBox(
+                    height: 26,
+                    child: CopyButton(
+                      onPressed: () {},
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             Container(
               width: double.infinity,
@@ -1464,18 +1589,21 @@ class MarkdownRenderer extends StatelessWidget {
                 color: lightGrey,
               ),
             ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: HighlightView(
-                code ?? '',
-                language: language == null || language.isEmpty
-                    ? 'plaintext'
-                    : language,
-                theme: theme,
-                padding: const EdgeInsets.all(8.0),
-                textStyle: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 14.0,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: HighlightView(
+                  code ?? '',
+                  language: language == null || language.isEmpty
+                      ? 'plaintext'
+                      : language,
+                  theme: theme,
+                  padding: const EdgeInsets.all(8.0),
+                  textStyle: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 14.0,
+                  ),
                 ),
               ),
             ),
@@ -1604,4 +1732,42 @@ class MarkdownRenderer extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildLatex(
+    MarkdownElement element,
+  ) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: _buildGroupedChildren(
+          element.children,
+          baseStyle,
+        ),
+      ),
+    );
+  }
+}
+
+class RtlTextSpan extends TextSpan {
+  const RtlTextSpan({
+    required String str,
+    super.style,
+    super.children,
+    super.semanticsLabel,
+  }) : super(text: "\u200F$str");
+}
+
+class LtrTextSpan extends TextSpan {
+  const LtrTextSpan({
+    required String str,
+    super.style,
+    super.children,
+    super.semanticsLabel,
+  }) : super(text: "\u200E$str");
 }

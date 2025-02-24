@@ -1,9 +1,10 @@
 import 'package:ai_app/constants/colors.dart';
-import 'package:ai_app/screens/array_content.dart';
+import 'package:ai_app/screens/markdown_renderer.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const Root());
 }
 
