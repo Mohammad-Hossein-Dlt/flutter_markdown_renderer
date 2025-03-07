@@ -121,7 +121,7 @@ class _ArrayContentState extends State<ArrayContent> {
   //   super.dispose();
   // }
 
-  String get textData => d10;
+  String get textData => d11;
 
   List<MarkdownElement> get elements => parseMarkdown(textData);
 
