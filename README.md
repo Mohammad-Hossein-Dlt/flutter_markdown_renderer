@@ -2,8 +2,12 @@
 # Preview
 
 ### Persian
-https://github.com/user-attachments/assets/216a7704-6c8e-4700-b524-d53f2ea42149
+
+https://github.com/user-attachments/assets/743d5097-9750-4633-8545-dcb916608b4b
+
+
 
 ### English
-https://github.com/user-attachments/assets/797031dc-0740-4668-8017-26318bb67e31
+
+https://github.com/user-attachments/assets/4fd70db4-23d0-4cef-922d-c561cf6b886b
 
