@@ -1,5 +1,5 @@
-import 'package:ai_app/constants/colors.dart';
-import 'package:ai_app/screens/markdown_renderer.dart';
+import 'package:markdown_parser/constants/colors.dart';
+import 'package:markdown_parser/screens/markdown_renderer.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
@@ -16,7 +16,7 @@ class Root extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: appTheme,
-      home: const ArrayContent(),
+      home: const Content(),
     );
   }
 }

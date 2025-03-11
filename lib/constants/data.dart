@@ -1,3 +1,9 @@
+String d = '''
+```python
+print("wefcwercwercvfewr");
+```
+''';
+
 String data = '''
 
 - Text **bold** ![Image](https://picsum.photos/200)
@@ -52,67 +58,68 @@ hello
 
 در زیر یک نمونه کد پایتون آورده شده است که از توابع، متغیرها، کلاس‌ها و توابع داخلی **استفاده** می‌کند. این کد یک ~~برنامه~~ ساده برای مدیریت لیست کارها (To-Do List) است.
 
-```python
-# تعریف یک کلاس برای مدیریت کارها
-class TodoList:
-    name = ''
-    def __init__(self):
-        self.tasks = []
+```java
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
-    # تابع برای اضافه کردن یک کار جدید
-    def add_task(self, task):
-        self.tasks.append(task)
-        print(f'Task "{task}" added to the list.')
+public class AdvancedJavaExample {
 
-    # تابع برای نمایش تمام کارها
-    def show_tasks(self):
-        if not self.tasks:
-            print('No tasks in the list.')
-        else:
-            print('Tasks:')
-            for index, task in enumerate(self.tasks, start=1):
-                print(f'{index}. {task}')
+    // متدی برای شبیه‌سازی دریافت داده از یک منبع با تأخیر
+    public static CompletableFuture<String> fetchData(String source, int delay) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                System.out.println("در حال دریافت داده از " + source);
+                // شبیه‌سازی تاخیر در دریافت داده
+                TimeUnit.SECONDS.sleep(delay);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
+            }
+            return "داده‌های " + source;
+        });
+    }
 
-    # تابع برای حذف یک کار
-    def remove_task(self, task_number):
-        if 1 <= task_number <= len(self.tasks):
-            removed_task = self.tasks.pop(task_number - 1)
-            print(f'Task "{removed_task}" removed from the list.')
-        else:
-            print('Invalid task number.')
+    public static void main(String[] args) {
+        // ایجاد یک ThreadPool با 4 هسته برای اجرای موازی
+        ExecutorService executor = Executors.newFixedThreadPool(4);
 
-# تابع اصلی برای اجرای برنامه
-def main():
-    # ایجاد یک نمونه از کلاس TodoList
-    todo_list = TodoList()
+        // لیست منابع داده به عنوان نمونه
+        List<String> sources = Arrays.asList("سرور1", "سرور2", "سرور3");
 
-    while True:
-        print('\n--- To-Do List Menu ---')
-        print('1. Add Task')
-        print('2. Show Tasks')
-        print('3. Remove Task')
-        print('4. Exit')
+        // فراخوانی متد fetchData به صورت موازی برای هر منبع
+        List<CompletableFuture<String>> futures = sources.stream()
+                .map(source -> fetchData(source, 2))
+                .collect(Collectors.toList());
 
-        # دریافت ورودی از کاربر
-        choice = input('Enter your choice: ')
+        // ترکیب همه CompletableFutureها به وسیله allOf
+        CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                futures.toArray(new CompletableFuture[0])
+        );
 
-        if choice == 1:
-            task = input('Enter the task: ')
-            todo_list.add_task(task)
-        elif choice == 2:
-            todo_list.show_tasks()
-        elif choice == 3:
-            task_number = int(input('Enter the task number to remove: '))
-            todo_list.remove_task(task_number)
-        elif choice == 4:
-            print('Exiting the program. Goodbye!')
-            break
-        else:
-            print('Invalid choice. Please try again.')
+        // پس از تکمیل همه عملیات، جمع‌آوری نتایج
+        CompletableFuture<List<String>> allResults = allFutures.thenApply(v ->
+                futures.stream()
+                        .map(CompletableFuture::join)
+                        .collect(Collectors.toList())
+        );
 
-# اجرای تابع اصلی
-if __name__ == '__main__':
-    main()
+        // دریافت و چاپ نتایج
+        try {
+            List<String> results = allResults.get();
+            results.forEach(System.out::println);
+        } catch (InterruptedException | ExecutionException e) {
+            System.err.println("خطا در اجرای عملیات: " + e.getMessage());
+        } finally {
+            executor.shutdown();
+        }
+    }
+}
+
 ```
 
 ### جدول به زبان انگلیسی (Sales Data Example):
@@ -149,11 +156,11 @@ if __name__ == '__main__':
 - Text **bold** ![Image](https://picsum.photos/200)
   > Blockquote
   ```dart
-  print("Code block");
+  print("Code1 1block1");
   ```
   
      ```dart
-     print("Code block");
+     print("Code1 1block");
      ```
 
   | Step | Description |
@@ -433,16 +440,16 @@ print(greet("World"))
 ```
 
 ### خروجی:
-1. سطح **اول** - آیتم ۱
+1. سطح *اول* - آیتم ۱
    1. سطح **دوم** - آیتم ۱
-      1. سطح سوم - آیتم ۱
-         1. سطح **چهارم** - آیتم ۱
+      1. سطح ***سوم*** - آیتم ۱
+         1. سطح ~~چهارم~~ - آیتم ۱
          2. سطح چهارم - آیتم ۲
       2. سطح سوم - آیتم ۲
    2. سطح دوم - آیتم ۲
-2. سطح اول - آیتم ۲
-   1. سطح دوم - آیتم ۱
-      1. سطح سوم - آیتم ۱
+2. سطح *~~اول~~* - آیتم ۲
+   1. سطح **~~دوم~~** - آیتم ۱
+      1. سطح ***~~سوم~~*** - آیتم ۱
       2. سطح سوم - آیتم ۲
    2. سطح دوم - آیتم ۲
 
@@ -483,7 +490,6 @@ print(greet("World"))
 
 ---
 
->  elknmcvle lemv lemvlksdfnmv lksdfvnlskd fvlksdfnv lksdfvmlksdfjndlsfkv odiksljvkl;sdf vklsdjfjbvwekfnklsdfjvsdkfjlksedfjvhb.
 > این یک نقل‌قول **تو در تو** است.
 > > > این یک نقل‌قول **تو در تو** است.
 
@@ -1045,5 +1051,141 @@ String d13 = r'''
 - یا ماتریسی با اعداد دلخواه؟
 
 لطفاً بیشتر توضیح دهید تا دقیقاً همان چیزی که می‌خواهید را ارائه دهم. 😊
+
+''';
+
+String d14 = r'''
+
+# عنوان سطح ۱
+## عنوان سطح ۲
+### عنوان سطح ۳
+#### عنوان سطح ۴
+##### عنوان سطح ۵
+###### عنوان سطح ۶
+___
+این یه متن معمولی هست
+
+**این یه متن بولد هست**  
+
+*این یه متن ایتالیک هست*  
+
+***این یه متن بولد و ایتالیک هست***  
+
+~~این یه متن خط‌خورده هست~~ 
+
+*~~این یه متن ایتالیک و خط‌خورده هست~~*  
+
+**~~این یه متن بولد و خط‌خورده هست~~**  
+
+***~~این یه متن بولد، ایتالیک و خط‌خورده هست~~***  
+___
+این یک `inline code` است.
+___
+```dart
+void main() {
+  String name = 'Ali'; // Define a string variable
+  int age = 20; // Define an integer variable
+
+  print('Hello, my name is $name and I am $age years old.'); // Print a message
+
+  if (age > 18) { // Check if age is greater than 18
+    print('I am an adult.');
+  } else { // If age is 18 or less
+    print('I am a child.');
+  }
+}
+```
+___
+1. سطح *اول* - آیتم ۱
+   1. سطح **دوم** - آیتم ۱
+      1. سطح ***سوم*** - آیتم ۱
+         1. سطح ~~چهارم~~ - آیتم ۱
+         2. سطح چهارم - آیتم ۲
+      2. سطح سوم - آیتم ۲
+   2. سطح دوم - آیتم ۲
+2. سطح *~~اول~~* - آیتم ۲
+   1. سطح **~~دوم~~** - آیتم ۱
+      1. سطح ***~~سوم~~*** - آیتم ۱
+      2. سطح سوم - آیتم ۲
+   2. سطح دوم - آیتم ۲
+___
+> این یک نقل‌قول **تو در تو** است.
+> > > این یک نقل‌قول **تو در تو** است.
+___
+\[
+u = \frac{\partial \psi}{\partial y} = -4, \quad v = -\frac{\partial \psi}{\partial x} = 10
+\]
+___
+این یک **تصویر** است ![Image](https://picsum.photos/200)
+___
+[این یک لینک است](https://www.google.com/)
+
+''';
+
+String d15 = r'''
+
+# Level 1 Title
+## Level 2 Title
+### Level 3 Title
+#### Level 4 Title
+##### Level 5 Title
+###### Level 6 Title
+___
+This is a normal text.
+
+**This is bold text.**  
+
+*This is italic text.*  
+
+***This is bold and italic text.***  
+
+~~This is strikethrough text.~~ 
+
+*~~This is italic and strikethrough text.~~*  
+
+**~~This is bold and strikethrough text.~~**  
+
+***~~This is bold, italic, and strikethrough text.~~***  
+___
+This is an `inline code`.
+___
+```dart
+void main() {
+  String name = 'Ali'; // Define a string variable
+  int age = 20; // Define an integer variable
+
+  print('Hello, my name is $name and I am $age years old.'); // Print a message
+
+  if (age > 18) { // Check if age is greater than 18
+    print('I am an adult.');
+  } else { // If age is 18 or less
+    print('I am a child.');
+  }
+}
+```
+___
+1. Level *One* - Item 1
+   1. Level **Two** - Item 1
+      1. Level ***Three*** - Item 1
+         1. Level ~~Four~~ - Item 1
+         2. Level Four - Item 2
+      2. Level Three - Item 2
+   2. Level Two - Item 2
+2. Level *~~One~~* - Item 2
+   1. Level **~~Two~~** - Item 1
+      1. Level ***~~Three~~*** - Item 1
+      2. Level Three - Item 2
+   2. Level Two - Item 2
+___
+> This is a **nested quote**.
+> > > This is a **nested quote**.
+___
+\[
+u = \frac{\partial \psi}{\partial y} = -4, \quad v = -\frac{\partial \psi}{\partial x} = 10
+\]
+___
+This is an **image**! ![Image](https://picsum.photos/200)
+___
+[This is a link](https://www.google.com/)
 
 ''';
